@@ -123,10 +123,21 @@ def evaluate_and_generate():
     base_smiles = "CC(=O)Oc1ccccc1C(=O)O" 
     mol = Chem.MolFromSmiles(base_smiles)
     
-    # Mutation: Add Methyl
+    # Mutation: Add Methyl safely
     rw_mol = Chem.RWMol(mol)
-    idx = rw_mol.AddAtom(Chem.Atom(6))
-    rw_mol.AddBond(2, idx, Chem.BondType.SINGLE)
+    # Find a Carbon atom with implicit Hs (available valence)
+    valid_idx = -1
+    for atom in rw_mol.GetAtoms():
+        if atom.GetSymbol() == 'C' and atom.GetTotalNumHs() > 0:
+            valid_idx = atom.GetIdx()
+            break
+            
+    if valid_idx != -1:
+        new_atom_idx = rw_mol.AddAtom(Chem.Atom(6)) # Add Carbon
+        rw_mol.AddBond(valid_idx, new_atom_idx, Chem.BondType.SINGLE)
+    else:
+        print("No valid site for mutation found, returning original.")
+        
     new_mol = rw_mol.GetMol()
     Chem.SanitizeMol(new_mol)
     new_smiles = Chem.MolToSmiles(new_mol)
